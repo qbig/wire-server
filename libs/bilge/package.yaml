@@ -1,4 +1,4 @@
-defaults: 
+defaults:
   local: ../../package-defaults.yaml
 name: bilge
 version: '0.22.0'
@@ -24,8 +24,10 @@ dependencies:
 - http-client >=0.5
 - http-types >=0.8
 - imports
+- lens
 - monad-control >=1.0
 - mtl >=2.2
+- string-conversions
 - text >=0.11
 - time >=1.4
 - tinylog >=0.9
@@ -33,6 +35,7 @@ dependencies:
 - transformers-base >=0.4
 - types-common >=0.7
 - unliftio-core >=0.1
+- uri-bytestring
 library:
   source-dirs: src
   exposed-modules:

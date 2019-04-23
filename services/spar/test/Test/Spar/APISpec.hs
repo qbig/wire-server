@@ -2,13 +2,30 @@
 
 module Test.Spar.APISpec where
 
-import Data.Proxy
+import Imports
 import Arbitrary ()
-import Servant.Swagger (validateEveryToJSON)
-import Spar.API as API
-import Test.Hspec
+import Data.Aeson (ToJSON, encode, eitherDecode)
+import Data.Proxy (Proxy(Proxy))
+import Data.Swagger.Schema (ToSchema)
+import Data.Swagger.Schema.Validation (validateToJSON)
+import Servant (JSON)
+import Servant.Swagger.Internal.Test (props)
+import Servant.Swagger.Internal.TypeLevel.API (Remove)
+import Servant.Swagger.TypeLevel (BodyTypes)
+import Spar.API (OutsideWorldAPI)
+import Spar.Types (IdPMetadataInfo)
+import Test.Hspec (Spec, it, shouldBe)
+import Test.QuickCheck (property)
+
 
 spec :: Spec
 spec = do
-  -- Note: SCIM types are not validated because their content-type is 'SCIM'.
-  validateEveryToJSON (Proxy @API.OutsideWorldAPI)
+  -- Note: SCIM types are not validated because their content-type is 'SCIM', or because they
+  -- are removed here explicitly.
+  props
+    (Proxy @[ToJSON, ToSchema])
+    (null . validateToJSON)
+    (Proxy @(Remove IdPMetadataInfo (BodyTypes JSON OutsideWorldAPI)))
+
+  it "roundtrip: IdPMetadataInfo" . property $ \(val :: IdPMetadataInfo) -> do
+    (eitherDecode . encode) val `shouldBe` Right val
