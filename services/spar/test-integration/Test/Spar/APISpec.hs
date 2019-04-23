@@ -4,7 +4,7 @@ import Imports hiding (head)
 import Bilge
 import Brig.Types.User
 import Control.Lens
-import Data.Aeson
+import Data.Aeson as Aeson
 import Data.Aeson.Lens
 import Data.ByteString.Conversion
 import Data.Id
@@ -19,6 +19,7 @@ import Spar.Types
 import URI.ByteString.QQ (uri)
 import Util.Core
 import Util.Types
+import Util.TestIdP
 
 import qualified Data.ByteString.Builder as LB
 import qualified Data.ZAuth.Token as ZAuth
@@ -661,6 +662,25 @@ specCRUDIdentityProvider = do
           idp <- call $ callIdpCreate (env ^. teSpar) (Just owner) metadata
           idp' <- call $ callIdpGet (env ^. teSpar) (Just owner) (idp ^. idpId)
           liftIO $ idp `shouldBe` idp'
+
+        it "handles *values* in json bodies" $ do
+          env <- ask
+          (owner, _) <- call $ createUserWithTeam (env ^. teBrig) (env ^. teGalley)
+          metadata <- makeTestIdPMetadata
+          let bdy = object [ "value" Aeson..= SAML.encode metadata ]
+          idp <- call $ callIdpCreateRaw (env ^. teSpar) (Just owner) (Aeson.encode bdy)
+          idp' <- call $ callIdpGet (env ^. teSpar) (Just owner) (idp ^. idpId)
+          liftIO $ idp `shouldBe` idp'
+
+        it "handles *urls* in json bodies" $ do
+          env <- ask
+          (owner, _) <- call $ createUserWithTeam (env ^. teBrig) (env ^. teGalley)
+          metadata <- makeTestIdPMetadata
+          withServeViaHttps (SAML.encode metadata) >>= \idpmetauri -> do
+            let bdy = object [ "uri" Aeson..= idpmetauri ]
+            idp <- call $ callIdpCreateRaw (env ^. teSpar) (Just owner) (Aeson.encode bdy)
+            idp' <- call $ callIdpGet (env ^. teSpar) (Just owner) (idp ^. idpId)
+            liftIO $ idp `shouldBe` idp'
 
 
 specScimAndSAML :: SpecWith TestEnv
