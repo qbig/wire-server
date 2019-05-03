@@ -68,6 +68,12 @@ data IdPMetadataInfo =
   | IdPMetadataURI URI
   deriving (Eq, Show, Generic)
 
+instance SAML.HasXMLRoot IdPMetadataInfo where
+  renderRoot = undefined  -- TODO: wait, do not commit this!  this instance shouldn't even be needed!
+
+instance SAML.HasXML IdPMetadataInfo where
+  parse = fmap IdPMetadataValue . SAML.parse
+
 instance FromJSON IdPMetadataInfo where
   parseJSON = withObject "IdPMetadataInfo" $ \obj -> do
     look <- (,) <$> (obj .:? "value") <*> (obj .:? "uri")
