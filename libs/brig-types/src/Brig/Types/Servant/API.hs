@@ -19,12 +19,22 @@ import "swagger2" Data.Swagger hiding (Header(..))
   -- NB: this package depends on both types-common, swagger2, so there is no away around this name
   -- clash other than -XPackageImports.
 
+import Data.LanguageCodes
+import Data.Text.Ascii
+import Data.ISO3166_CountryCodes
+import Data.Currency (Alpha)
+import Galley.Types.Teams
+import Galley.Types.Bot.Service
 import Brig.Types.Client.Prekey (PrekeyId, Prekey, LastPrekey)
 import Brig.Types.Provider
+import Brig.Types.Connection
+import Brig.Types.User
 import Brig.Types.Intra
 import qualified Data.Metrics as Metrics
 import Control.Lens
+import Data.Range
 import Data.Aeson (toJSON)
+import Brig.Types.User.Auth (CookieLabel)
 import Data.Aeson (Value(..))
 import Data.HashMap.Strict.InsOrd
 import Data.Id
@@ -36,6 +46,12 @@ import Servant hiding (Get, Put, Post, Delete, ReqBody)
 import qualified Servant
 import Servant.Swagger
 import URI.ByteString.QQ (uri)
+import qualified Data.Json.Util
+
+import Brig.Types.Activation
+
+
+
 
 {-
 import Data.String.Conversions
@@ -63,61 +79,62 @@ swagger :: Swagger
 swagger = toSwagger (Proxy @API)
 
 
-type API = PublicAPI :<|> InternalAPI
+type API = PublicAPI :<|> "i" :> InternalAPI
 
 type PublicAPI = Get NoContent
 
 type InternalAPI
-     = "i" :> "status"     :> Get NoContent
-  :<|> "i" :> "status"     :> Head NoContent
-  :<|> "i" :> "monitoring" :> Get Metrics.Metrics
+     = "status"     :> Get NoContent
+  :<|> "status"     :> Head NoContent
+  :<|> "monitoring" :> Get Metrics.Metrics
 
-  :<|> "i" :> "users" :> Capture "uid" UserId :> "auto-connect"
+  :<|> "users" :> Capture "uid" UserId :> "auto-connect"
       -- TODO: opt (header "Z-Connection")
       :> ReqBody UserSet
-      :> Post NoContent
+      :> Post [UserConnection]
+     -- handler: autoConnect
 
-  :<|> "i" :> "users"
+  :<|> "users"
       :> ReqBody NewUser
-      :> Post NoContent
+      :> Post (Headers '[Servant.Header "Location" UserId] SelfProfile)
+     -- handler: createUserNoVerify
+
+  :<|> "self" :> "email"
+      -- TODO: header "Z-User"
+      :> ReqBody Brig.Types.User.EmailUpdate
+      :> Put204 NoContent
+      -- TODO: responds with 202 or 204 (decided dynamically).  can servant express that?
+     -- handler: changeSelfEmailNoSend
+
+  :<|> "users" :> Capture "uid" UserId
+      :> Delete202 NoContent
+     -- handler: deleteUserNoVerify
+
+  :<|> "users" :> "connections-status"
+      :> QueryParam' '[Optional] "filter" Relation
+      :> QueryParam "users" UserId
+      :> Get [ConnectionStatus]
+     -- handler: deprecatedGetConnectionsStatus
+
+  :<|> "users" :> "connections-status"
+      :> QueryParam' '[Optional] "filter" Relation
+      :> ReqBody ConnectionsStatusRequest
+      :> Post [ConnectionStatus]
+     -- handler: getConnectionsStatus
+
+  :<|> "users"
+      :> QueryParam "ids" (List UserId)
+      :> Get _
+     -- handler: listActivatedAccounts
+
+  :<|> "users"
+      :> QueryParam "handles" (List Handles)
+      :> Get _
+     -- handler: listActivatedAccounts
+
 
 
 {-
-
-    post "/i/users" (continue createUserNoVerify) $
-        accept "application" "json"
-        .&. jsonRequest @NewUser
-
-           . addHeader "Location" (toByteString' uid)
-           $ json (SelfProfile usr)
-
-
-
-
-
-
-
-
-
-    put "/i/self/email" (continue changeSelfEmailNoSend) $
-        header "Z-User"
-        .&. jsonRequest @EmailUpdate
-
-    delete "/i/users/:id" (continue deleteUserNoVerify) $
-        capture "id"
-
-    get "/i/users/connections-status" (continue deprecatedGetConnectionsStatus) $
-        query "users"
-        .&. opt (query "filter")
-
-    post "/i/users/connections-status" (continue getConnectionsStatus) $
-        accept "application" "json"
-        .&. jsonRequest @ConnectionsStatusRequest
-        .&. opt (query "filter")
-
-    get "/i/users" (continue listActivatedAccounts) $
-        accept "application" "json"
-        .&. (param "ids" ||| param "handles")
 
     get "/i/users" (continue listAccountsByIdentity) $
         accept "application" "json"
@@ -414,11 +431,11 @@ camelToUnderscore = concatMap go . (ix 0 %~ toLower)
 
 
 
-type Head = Verb 'HEAD 204 '[JSON]
+type Head = Verb 'HEAD 204 '[JSON]  -- TODO: which status code is this?
 type Get = Verb 'GET 200 '[JSON]
 type Post = Verb 'POST 201 '[JSON]
-type Put = Verb 'PUT 200 '[JSON]
-type Delete = Verb 'DELETE 204 '[JSON]
+type Put204 = Verb 'PUT 204 '[JSON]
+type Delete202 = Verb 'DELETE 202 '[JSON]
 
 type ReqBody = Servant.ReqBody '[JSON]
 
@@ -436,4 +453,145 @@ instance ToSchema Metrics.Metrics where
     declareNamedSchema = undefined
 
 instance ToSchema UserSet where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema UserConnection where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Relation where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToParamSchema Relation where
+--    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Message where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Data.Json.Util.UTCTimeMillis where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema NewUser where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema NewUserOrigin where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema (Range from to typ) where
+    declareNamedSchema = undefined
+
+instance ToSchema User where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema UserIdentity where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Email where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Phone where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Name where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema UserSSOId where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Pict where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Asset where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema AssetSize where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema ColourId where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Locale where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Language where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Country where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema SelfProfile where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema ActivationCode where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema CookieLabel where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema PlainTextPassword where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema ManagedBy where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema InvitationCode where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema (NewTeam ()) where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema NewTeamUser where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema ServiceRef where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema BindingNewTeamUser where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema BindingNewTeam where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Alpha where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema (AsciiText Base64Url) where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema CountryCode where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Value where
     declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
+
+instance ToSchema Handle where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+deriving instance Generic ISO639_1
+
+instance ToSchema ISO639_1 where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema Brig.Types.User.EmailUpdate where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema ConnectionsStatusRequest where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema ConnectionStatus where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+
+
+
+
+-- TODO: read ~/src/wire-server-swaggrify/libs/brig-types/src/Brig/Types/Swagger.hs and see what we've missed.
+
+
+
+-- data Auth creds where
+  -- @... :> Auth '["zuser", "zconn"] :> ...@
+  -- @... :> Auth '["zuser"] :> ...@
+  -- @... :> Auth '["zbot"] :> ...@
+  -- ...
+
+    -- handler instances can then be written in terms of the expanded type aliases (@.. :> Header ... :> ...@).
