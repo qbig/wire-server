@@ -19,6 +19,7 @@ import "swagger2" Data.Swagger hiding (Header(..))
   -- NB: this package depends on both types-common, swagger2, so there is no away around this name
   -- clash other than -XPackageImports.
 
+import Data.ByteString.Conversion (List(..))
 import Data.LanguageCodes
 import Data.Text.Ascii
 import Data.ISO3166_CountryCodes
@@ -462,7 +463,6 @@ instance ToSchema Relation where
     declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
 
 instance ToParamSchema Relation where
---    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
 
 instance ToSchema Message where
     declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
@@ -580,6 +580,16 @@ instance ToSchema ConnectionsStatusRequest where
 instance ToSchema ConnectionStatus where
     declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
 
+instance ToSchema UserAccount where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToSchema AccountStatus where
+    declareNamedSchema = genericDeclareNamedSchema defaultSchemaOptions
+
+instance ToParamSchema a => ToParamSchema (List a) where
+    toParamSchema = undefined
+
+instance ToParamSchema Handle where
 
 
 
