@@ -12,6 +12,7 @@ dependencies:
 - hostname-validate
 - lens
 - imports
+- metrics-core
 library:
   source-dirs: src
   ghc-options:

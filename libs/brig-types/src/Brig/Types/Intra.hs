@@ -103,7 +103,7 @@ instance ToJSON UserAccount where
 -- APIs for auto-connections, listing user's clients)
 data UserSet = UserSet
     { usUsrs :: !(Set UserId)
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 instance FromJSON UserSet where
     parseJSON = withObject "user-set" $ \o ->

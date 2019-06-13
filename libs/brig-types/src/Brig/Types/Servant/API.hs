@@ -1,3 +1,7 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+
+
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- FUTUREWORK: move the 'ToSchema' instances to their home modules (where the data types
 -- live), and turn warning about orphans back on.
@@ -17,18 +21,19 @@ import "swagger2" Data.Swagger hiding (Header(..))
 
 import Brig.Types.Client.Prekey (PrekeyId, Prekey, LastPrekey)
 import Brig.Types.Provider
-import Brig.Types.Team.LegalHold
+import Brig.Types.Intra
+import qualified Data.Metrics as Metrics
 import Control.Lens
 import Data.Aeson (toJSON)
 import Data.Aeson (Value(..))
 import Data.HashMap.Strict.InsOrd
 import Data.Id
-import Data.LegalHold
 import Data.Misc
 import Data.Proxy
 import Data.Text as Text (unlines)
 import Data.UUID (UUID, fromText)
-import Servant.API hiding (Header)
+import Servant hiding (Get, Put, Post, Delete, ReqBody)
+import qualified Servant
 import Servant.Swagger
 import URI.ByteString.QQ (uri)
 
@@ -55,51 +60,44 @@ main = do
 
 
 swagger :: Swagger
-swagger = toSwagger (Proxy @GalleyRoutes)
+swagger = toSwagger (Proxy @API)
 
 
 type API = PublicAPI :<|> InternalAPI
 
-type PublicAPI
-     = "teams" :> Capture "tid" TeamId :> "legalhold" :> "settings"
-          :> ReqBody '[JSON] NewLegalHoldService
-          :> Post '[JSON] ViewLegalHoldService
-  :<|> "teams" :> Capture "tid" TeamId :> "legalhold" :> "settings"
-          :> Get '[JSON] ViewLegalHoldService
-  :<|> "teams" :> Capture "tid" TeamId :> "legalhold" :> "settings"
-          :> Verb 'DELETE 204 '[] NoContent
-
-  :<|> "teams" :> Capture "tid" TeamId :> "legalhold" :> Capture "uid" UserId
-          :> Post '[] NoContent
-  :<|> "teams" :> Capture "tid" TeamId :> "legalhold" :> Capture "uid" UserId :> "approve"
-          :> Verb 'PUT 204 '[] NoContent
-  :<|> "teams" :> Capture "tid" TeamId :> "legalhold" :> Capture "uid" UserId
-          :> Get '[JSON] UserLegalHoldStatusResponse
-  :<|> "teams" :> Capture "tid" TeamId :> "legalhold" :> Capture "uid" UserId
-          :> Verb 'DELETE 204 '[] NoContent
+type PublicAPI = Get NoContent
 
 type InternalAPI
-     = "i" :> "status"
-         :> Get '[] NoContent
-  :<|> "i" :> "status"
-         :> Head '[] NoContent
+     = "i" :> "status"     :> Get NoContent
+  :<|> "i" :> "status"     :> Head NoContent
+  :<|> "i" :> "monitoring" :> Get Metrics.Metrics
 
-  :<|> "i" :> "monitoring"
-         :> Get '[JSON]
-    get "/i/monitoring" (continue $ const $ view metrics >>= fmap json . render) $
-        accept "application" "json"
+  :<|> "i" :> "users" :> Capture "uid" UserId :> "auto-connect"
+      -- TODO: opt (header "Z-Connection")
+      :> ReqBody UserSet
+      :> Post NoContent
+
+  :<|> "i" :> "users"
+      :> ReqBody NewUser
+      :> Post NoContent
 
 
-
-    post "/i/users/:id/auto-connect" (continue autoConnect) $
-        accept "application" "json"
-        .&. capture "id"
-        .&. opt (header "Z-Connection")
-        .&. jsonRequest @UserSet
+{-
 
     post "/i/users" (continue createUserNoVerify) $
         accept "application" "json"
         .&. jsonRequest @NewUser
+
+           . addHeader "Location" (toByteString' uid)
+           $ json (SelfProfile usr)
+
+
+
+
+
+
+
+
 
     put "/i/self/email" (continue changeSelfEmailNoSend) $
         header "Z-User"
@@ -206,15 +204,6 @@ type InternalAPI
 
 
 
-
-
-
-
-instance ToParamSchema (Id a) where
-    toParamSchema _ = toParamSchema (Proxy @UUID)
-
-instance ToSchema (Id a) where
-    declareNamedSchema _ = declareNamedSchema (Proxy @UUID)
 
 instance ToSchema HttpsUrl where
     declareNamedSchema _ = declareNamedSchema (Proxy @Text)
@@ -413,6 +402,8 @@ instance ToSchema Prekey where
 instance ToSchema LastPrekey where
     declareNamedSchema _ = declareNamedSchema (Proxy @Prekey)
 
+-}
+
 
 ----------------------------------------------------------------------
 -- helpers
@@ -420,3 +411,29 @@ instance ToSchema LastPrekey where
 camelToUnderscore :: String -> String
 camelToUnderscore = concatMap go . (ix 0 %~ toLower)
   where go x = if isUpper x then "_" <> [toLower x] else [x]
+
+
+
+type Head = Verb 'HEAD 204 '[JSON]
+type Get = Verb 'GET 200 '[JSON]
+type Post = Verb 'POST 201 '[JSON]
+type Put = Verb 'PUT 200 '[JSON]
+type Delete = Verb 'DELETE 204 '[JSON]
+
+type ReqBody = Servant.ReqBody '[JSON]
+
+
+
+
+
+instance ToParamSchema (Id a) where
+    toParamSchema _ = toParamSchema (Proxy @UUID)
+
+instance ToSchema (Id a) where
+    declareNamedSchema _ = declareNamedSchema (Proxy @UUID)
+
+instance ToSchema Metrics.Metrics where
+    declareNamedSchema = undefined
+
+instance ToSchema UserSet where
+    declareNamedSchema = genericDeclareNamedSchemaUnrestricted defaultSchemaOptions
