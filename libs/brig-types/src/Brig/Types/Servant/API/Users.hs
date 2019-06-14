@@ -816,20 +816,3 @@ type API'
     TURN.routes
 
 -}
-
-
-
-
-
-
--- TODO: read ~/src/wire-server-swaggrify/libs/brig-types/src/Brig/Types/Swagger.hs and see what we've missed.
-
-
-
--- data Auth creds where
-  -- @... :> Auth '["zuser", "zconn"] :> ...@
-  -- @... :> Auth '["zuser"] :> ...@
-  -- @... :> Auth '["zbot"] :> ...@
-  -- ...
-
-    -- handler instances can then be written in terms of the expanded type aliases (@.. :> Header ... :> ...@).
