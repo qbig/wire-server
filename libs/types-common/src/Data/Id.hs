@@ -63,7 +63,7 @@ instance NFData NoId where rnf a = seq a ()
 
 newtype Id a = Id
     { toUUID :: UUID
-    } deriving (Eq, Ord, NFData, Hashable)
+    } deriving (Eq, Ord, NFData, Hashable, Generic)
 
 -- REFACTOR: non-derived, custom show instances break pretty-show and violate the law
 -- that @show . read == id@.  can we derive Show here?
