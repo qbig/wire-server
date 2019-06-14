@@ -1,10 +1,18 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+
+
 module Brig.Types.Servant.API.Users where
+
+import qualified "swagger" Data.Swagger.Build.Api as Swagger1
+import "swagger2" Data.Swagger as Swagger2
 
 import Brig.Types.Activation
 import Brig.Types.Client.Prekey (PrekeyId, Prekey, LastPrekey)
 import Brig.Types.Connection
 import Brig.Types.Intra
 import Brig.Types.Provider
+import Brig.Types.Servant.Orphans
 import Brig.Types.User
 import Brig.Types.User.Auth (CookieLabel)
 import Control.Lens
@@ -27,30 +35,31 @@ import Galley.Types.Teams
 import qualified Data.Json.Util
 import qualified Data.Metrics as Metrics
 import qualified Servant
-import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
+import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam', URI)
 import Servant.Swagger
 import URI.ByteString.QQ (uri)
+import URI.ByteString (URI)
 
-import Brig.Types.Servant.Orphans
 
 
-type API
-     = Get NoContent
+swagger :: Swagger  -- TODO: just for testing; remove this later
+swagger = toSwagger (Proxy @API)
+
+
+
+type API = "users" :> API'
+
+type API'
+     = "api-docs"
+      :> QueryParamStrict "base_url" URI
+      :> Get Swagger1.ApiDecl
+
+  :<|> Capture "uid" UserId
+      :> AuthZUser
+      :> Head NoContent
+     -- handler: checkUserExists
 
 {-
-
-    get "/users/api-docs"
-        (\(_ ::: url) k ->
-            let doc = encode $ mkSwaggerApi (decodeLatin1 url) Doc.brigModels (sitemap o)
-            in k $ responseLBS status200 [jsonContent] doc) $
-        accept "application" "json"
-        .&. query "base_url"
-
-    ---
-
-    head "/users/:id" (continue checkUserExists) $
-        header "Z-User"
-        .&. capture "id"
 
     document "HEAD" "userExists" $ do
         Doc.summary "Check if a user ID exists"
@@ -58,6 +67,23 @@ type API
             Doc.description "User ID"
         Doc.response 200 "User exists" Doc.end
         Doc.errorResponse userNotFound
+
+-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{-
 
     ---
 

@@ -6,6 +6,7 @@ module Brig.Types.Servant.Orphans where
 
 import Imports
 
+import qualified "swagger" Data.Swagger.Build.Api as Swagger1
 import "swagger2" Data.Swagger hiding (Header(..))
   -- NB: this package depends on both types-common, swagger2, so there is no away around this name
   -- clash other than -XPackageImports.
@@ -33,7 +34,9 @@ import Galley.Types.Teams
 import qualified Data.Json.Util
 import qualified Data.Metrics as Metrics
 import qualified Servant
-import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
+import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam', URI)
+import Servant.Swagger
+import URI.ByteString (URI)
 
 
 ----------------------------------------------------------------------
@@ -59,6 +62,10 @@ instance FromJSON ActivationCodeObject where
 instance ToJSON ActivationCodeObject where
     toJSON (ActivationCodeObject key code) = object [ "key" Aeson..= key, "code" Aeson..= code ]
 
+
+----------------------------------------------------------------------
+-- * generic servant helpers
+
 type Head = Verb 'HEAD 204 '[JSON]  -- TODO: which status code is this?
 type Get = Verb 'GET 200 '[JSON]
 type Post = Verb 'POST 201 '[JSON]
@@ -74,7 +81,52 @@ type QueryParamOptional = Servant.QueryParam  -- TODO: which one?
 
 
 ----------------------------------------------------------------------
--- helpers
+-- * wire auth combinators
+
+type InternalZUser = Header "Z-User" UserId
+type InternalZConn = Header "Z-Connection" ConnId
+
+data AuthZUser
+data AuthZConn
+
+-- this is fun because we want to generate swagger docs for what this looks like from the
+-- other side of nginz, but we still want the handler types for 'HasServer' to pan out.  and
+-- it turns out it's quite simple to achieve this!
+
+-- TODO: the 'HasSwagger' instances have the (small?) flaw that functions who require both
+-- z-user and z-conn will require the authorization header twice.  perhaps we can write a type
+-- family that eliminates all auth headers of type 'Text', and call it here before we inject a
+-- new one?
+
+instance HasSwagger api => HasSwagger (AuthZUser :> api) where
+    toSwagger _ = toSwagger (Proxy @(Header "Authorization" Text :> api))
+
+instance HasSwagger api => HasSwagger (AuthZConn :> api) where
+    toSwagger _ = toSwagger (Proxy @(Header "Authorization" Text :> api))
+
+instance HasServer api ctx => HasServer (AuthZUser :> api) ctx where
+    type ServerT (AuthZUser :> api) m =
+        ServerT (Header "Z-User" UserId :> api) m
+
+    route _ =
+        route (Proxy @(Header "Z-User" UserId :> api))
+
+    hoistServerWithContext _ ctx nt srv =
+        hoistServerWithContext (Proxy @(Header "Z-User" UserId :> api)) ctx nt srv
+
+instance HasServer api ctx => HasServer (AuthZConn :> api) ctx where
+    type ServerT (AuthZConn :> api) m =
+        ServerT (Header "Z-Connection" UserId :> api) m
+
+    route _ =
+        route (Proxy @(Header "Z-Connection" UserId :> api))
+
+    hoistServerWithContext _ ctx nt srv =
+        hoistServerWithContext (Proxy @(Header "Z-Connection" UserId :> api)) ctx nt srv
+
+
+----------------------------------------------------------------------
+-- * swagger helpers
 
 camelToUnderscore :: String -> String
 camelToUnderscore = concatMap go . (ix 0 %~ toLower)
@@ -83,6 +135,9 @@ camelToUnderscore = concatMap go . (ix 0 %~ toLower)
 
 ----------------------------------------------------------------------
 -- * orphans
+
+instance FromHttpApiData (Id U) where
+    parseUrlPiece = undefined
 
 instance ToParamSchema (Id a) where
     toParamSchema _ = toParamSchema (Proxy @UUID)
@@ -239,6 +294,10 @@ instance ToParamSchema Phone
 instance ToParamSchema Handle
 instance ToParamSchema AccountStatus
 instance ToParamSchema PhonePrefix
+
+instance ToParamSchema URI where
+    toParamSchema _ = toParamSchema (Proxy @Text)
+
 instance ToSchema AccountStatusUpdate
 instance ToSchema AccountStatusObject
 instance ToSchema ActivationCodeObject
@@ -252,3 +311,6 @@ instance ToSchema ManagedByUpdate
 instance ToSchema RichInfoUpdate
 instance ToSchema RichInfo
 instance ToSchema RichField
+
+instance ToSchema Swagger1.ApiDecl where
+    declareNamedSchema _ = declareNamedSchema (Proxy @Value)

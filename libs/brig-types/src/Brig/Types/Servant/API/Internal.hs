@@ -13,13 +13,15 @@ import qualified Servant
 import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
 
 
-type InternalAPI
+type API = "i" :> API'
+
+type API'
      = "status"     :> Get NoContent
   :<|> "status"     :> Head NoContent
   :<|> "monitoring" :> Get Metrics.Metrics
 
   :<|> "users" :> Capture "uid" UserId :> "auto-connect"
-      -- TODO: opt (header "Z-Connection")
+      :> InternalZConn
       :> ReqBody UserSet
       :> Post [UserConnection]
      -- handler: autoConnect
@@ -30,7 +32,7 @@ type InternalAPI
      -- handler: createUserNoVerify
 
   :<|> "self" :> "email"
-      -- TODO: header "Z-User"
+      :> InternalZUser
       :> ReqBody Brig.Types.User.EmailUpdate
       :> Put204 NoContent
       -- TODO: responds with 202 or 204 (decided dynamically).  can servant express that?
