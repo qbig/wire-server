@@ -37,27 +37,25 @@ import qualified Data.Metrics as Metrics
 import qualified Servant
 import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam', URI)
 import Servant.Swagger
+import Servant.API.Generic
 import URI.ByteString.QQ (uri)
 import URI.ByteString (URI)
 
 
+api :: Proxy (ToServantApi API)
+api = genericApi (Proxy :: Proxy API)
 
-swagger :: Swagger  -- TODO: just for testing; remove this later
-swagger = toSwagger (Proxy @API)
+data API route = API
+  { _apiDocs :: route :-
+         "api-docs" :> QueryParamStrict "base_url" URI :> Get Swagger1.ApiDecl
 
-
-
-type API = "users" :> API'
-
-type API'
-     = "api-docs"
-      :> QueryParamStrict "base_url" URI
-      :> Get Swagger1.ApiDecl
-
-  :<|> Capture "uid" UserId
+  , _uidHead :: route :-
+         Capture "uid" UserId
       :> AuthZUser
       :> Head NoContent
      -- handler: checkUserExists
+
+  } deriving (Generic)
 
 {-
 
@@ -69,15 +67,6 @@ type API'
         Doc.errorResponse userNotFound
 
 -}
-
-
-
-
-
-
-
-
-
 
 
 

@@ -48,6 +48,8 @@ import qualified Data.Metrics as Metrics
 import qualified Servant
 import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
 import Servant.Swagger
+import Servant.API.Generic
+import Servant.Server.Generic
 import URI.ByteString.QQ (uri)
 
 import Brig.Types.Servant.Orphans
@@ -82,18 +84,33 @@ main = do
 ----------------------------------------------------------------------
 
 
-
-
 swagger :: Swagger
-swagger = toSwagger (Proxy @API)
+swagger = toSwagger api
 
+api :: Proxy (ToServantApi API')
+api = genericApi (Proxy :: Proxy API')
 
-type API
-     = Brig.Types.Servant.API.Internal.API
-  :<|> Brig.Types.Servant.API.Users.API
-
-
+data API route = API
+  { _route_i     :: route :- "i"     :> ToServantApi Brig.Types.Servant.API.Internal.API
+  , _route_users :: route :- "users" :> ToServantApi Brig.Types.Servant.API.Users.API
+  }
 
 
 
 -- TODO: read ~/src/wire-server-swaggrify/libs/brig-types/src/Brig/Types/Swagger.hs and see what we've missed.
+
+
+
+----------------------------------------------------------------------
+-- noise: this is how we'll build servers later.
+
+data API' route = API'
+  { _r0002 :: route :- Get NoContent
+  }
+  deriving (Generic)
+
+server' :: API' AsServer
+server' = API' { _r0002 = undefined :: Handler NoContent }
+
+app' :: Application
+app' = genericServe server'

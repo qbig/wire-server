@@ -312,5 +312,8 @@ instance ToSchema RichInfoUpdate
 instance ToSchema RichInfo
 instance ToSchema RichField
 
+instance ToParamSchema ConnId where
+    toParamSchema _ = toParamSchema (Proxy @Text)
+
 instance ToSchema Swagger1.ApiDecl where
     declareNamedSchema _ = declareNamedSchema (Proxy @Value)

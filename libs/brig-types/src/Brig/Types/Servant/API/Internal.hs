@@ -1,4 +1,4 @@
-module Brig.Types.Servant.API.Internal where
+module Brig.Types.Servant.API.Internal (api, API(..)) where
 
 import Brig.Types.Activation
 import Brig.Types.Connection
@@ -14,13 +14,10 @@ import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
 import Servant.API.Generic
 
 
-type API = "i" :> Get NoContent
+api :: Proxy (ToServantApi API)
+api = genericApi (Proxy :: Proxy API)
 
-api :: Proxy (ToServantApi API')
-api = genericApi (Proxy :: Proxy API')
-
--- $msg=sprintf("_r%4.4i", $i); if (/_r\d\d\d\d/) { $i++; s/_r000\d/$msg/e; } print
-data API' route = API
+data API route = API
   { _r0002 :: route :- "status"     :> Get NoContent
   , _r0003 :: route :- "status"     :> Head NoContent
   , _r0004 :: route :- "monitoring" :> Get Metrics.Metrics
