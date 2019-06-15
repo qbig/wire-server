@@ -11,6 +11,7 @@ import Galley.Types
 import qualified Data.Metrics as Metrics
 import qualified Servant
 import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
+import Servant.API.Generic
 
 
 type API = "i" :> API'
