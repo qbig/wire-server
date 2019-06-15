@@ -16,179 +16,184 @@ import Servant.API.Generic
 
 type API = "i" :> Get NoContent
 
-type API'
-     = "status"     :> Get NoContent
-  :<|> "status"     :> Head NoContent
-  :<|> "monitoring" :> Get Metrics.Metrics
+api :: Proxy (ToServantApi API')
+api = genericApi (Proxy :: Proxy API')
 
-  :<|> "users" :> Capture "uid" UserId :> "auto-connect"
+-- $msg=sprintf("_r%4.4i", $i); if (/_r\d\d\d\d/) { $i++; s/_r000\d/$msg/e; } print
+data API' route = API
+  { _r0002 :: route :- "status"     :> Get NoContent
+  , _r0003 :: route :- "status"     :> Head NoContent
+  , _r0004 :: route :- "monitoring" :> Get Metrics.Metrics
+  , _r0005 :: route :- "users" :> Capture "uid" UserId :> "auto-connect"
       :> InternalZConn
       :> ReqBody UserSet
       :> Post [UserConnection]
      -- handler: autoConnect
 
-  :<|> "users"
+  , _r0011 :: route :- "users"
       :> ReqBody NewUser
       :> Post (Headers '[Servant.Header "Location" UserId] SelfProfile)
      -- handler: createUserNoVerify
 
-  :<|> "self" :> "email"
+  , _r0018 :: route :- "self" :> "email"
       :> InternalZUser
       :> ReqBody Brig.Types.User.EmailUpdate
       :> Put204 NoContent
       -- TODO: responds with 202 or 204 (decided dynamically).  can servant express that?
      -- handler: changeSelfEmailNoSend
 
-  :<|> "users" :> Capture "uid" UserId
+  , _r0023 :: route :- "users" :> Capture "uid" UserId
       :> Delete202 NoContent
      -- handler: deleteUserNoVerify
 
-  :<|> "users" :> "connections-status"
+  , _r0027 :: route :- "users" :> "connections-status"
       :> QueryParamOptional "filter" Relation
       :> QueryParamStrict "users" UserId
       :> Get [ConnectionStatus]
      -- handler: deprecatedGetConnectionsStatus
 
-  :<|> "users" :> "connections-status"
+  , _r0033 :: route :- "users" :> "connections-status"
       :> QueryParamOptional "filter" Relation
       :> ReqBody ConnectionsStatusRequest
       :> Post [ConnectionStatus]
      -- handler: getConnectionsStatus
 
-  :<|> "users"
+  , _r0039 :: route :- "users"
       :> QueryParamStrict "ids" (List UserId)
       :> Get [UserAccount]
      -- handler: listActivatedAccounts
 
-  :<|> "users"
+  , _r0044 :: route :- "users"
       :> QueryParamStrict "handles" (List Handle)
       :> Get [UserAccount]
      -- handler: listActivatedAccounts
 
-  :<|> "users"
+  , _r0049 :: route :- "users"
       :> QueryParamStrict "email" Email
       :> Get [UserAccount]
      -- handler: listAccountsByIdentity
 
-  :<|> "users"
+  , _r0054 :: route :- "users"
       :> QueryParamStrict "phone" Phone
       :> Get [UserAccount]
      -- handler: listAccountsByIdentity
 
-  :<|> "users" :> Capture "uid" UserId :> "status"
+  , _r0059 :: route :- "users" :> Capture "uid" UserId :> "status"
       :> ReqBody AccountStatusUpdate
       :> Put200 NoContent
      -- handler: changeAccountStatus
 
-  :<|> "users" :> Capture "uid" UserId :> "status"
+  , _r0064 :: route :- "users" :> Capture "uid" UserId :> "status"
       :> Get AccountStatusObject
      -- handler: getAccountStatus
 
-  :<|> "users" :> Capture "uid" UserId :> "contacts"
+  , _r0068 :: route :- "users" :> Capture "uid" UserId :> "contacts"
       :> Get UserIds
      -- handler: getContactList
 
-  :<|> "users" :> "activation-code"
+  , _r0072 :: route :- "users" :> "activation-code"
       :> QueryParamStrict "email" Email
       :> Get ActivationCodeObject
      -- handler: getActivationCode
 
-  :<|> "users" :> "activation-code"
+  , _r0077 :: route :- "users" :> "activation-code"
       :> QueryParamStrict "phone" Phone
       :> Get ActivationCodeObject
      -- handler: getActivationCode
 
-  :<|> "users" :> "password-reset-code"
+  , _r0082 :: route :- "users" :> "password-reset-code"
       :> QueryParamStrict "email" Email
       :> Get ActivationCodeObject
      -- handler: getPasswordResetCode
 
-  :<|> "users" :> "password-reset-code"
+  , _r0087 :: route :- "users" :> "password-reset-code"
       :> QueryParamStrict "phone" Phone
       :> Get ActivationCodeObject
      -- handler: getPasswordResetCode
 
-  :<|> "users" :> "revoke-identity"
+  , _r0092 :: route :- "users" :> "revoke-identity"
       :> QueryParamStrict "email" Email
       :> Get NoContent
      -- handler: revokeIdentity
 
-  :<|> "users" :> "revoke-identity"
+  , _r0097 :: route :- "users" :> "revoke-identity"
       :> QueryParamStrict "phone" Phone
       :> Get NoContent
      -- handler: revokeIdentity
 
-  :<|> "users" :> "blacklist"
+  , _r0102 :: route :- "users" :> "blacklist"
       :> QueryParamStrict "email" Email
       :> Get NoContent
      -- handler: checkBlacklist
 
-  :<|> "users" :> "blacklist"
+  , _r0107 :: route :- "users" :> "blacklist"
       :> QueryParamStrict "phone" Phone
       :> Get NoContent
      -- handler: checkBlacklist
 
-  :<|> "users" :> "blacklist"
+  , _r0112 :: route :- "users" :> "blacklist"
       :> QueryParamStrict "email" Email
       :> Delete200 NoContent
      -- handler: deleteFromBlacklist
 
-  :<|> "users" :> "blacklist"
+  , _r0117 :: route :- "users" :> "blacklist"
       :> QueryParamStrict "phone" Phone
       :> Delete200 NoContent
      -- handler: deleteFromBlacklist
 
-  :<|> "users" :> "blacklist"
+  , _r0122 :: route :- "users" :> "blacklist"
       :> QueryParamStrict "email" Email
       :> Post NoContent
      -- handler: addBlacklist
 
-  :<|> "users" :> "blacklist"
+  , _r0127 :: route :- "users" :> "blacklist"
       :> QueryParamStrict "phone" Phone
       :> Post NoContent
      -- handler: addBlacklist
 
     -- given a phone number (or phone number prefix), see whether
     -- it is blocked via a prefix (and if so, via which specific prefix)
-  :<|> "users" :> "phone-prefixes" :> Capture "prefix" PhonePrefix
+  , _r0134 :: route :- "users" :> "phone-prefixes" :> Capture "prefix" PhonePrefix
       :> Get [ExcludedPrefix]
      -- handler: getPhonePrefixes
 
-  :<|> "users" :> "phone-prefixes" :> Capture "prefix" PhonePrefix
+  , _r0138 :: route :- "users" :> "phone-prefixes" :> Capture "prefix" PhonePrefix
       :> Delete200 NoContent
      -- handler: deleteFromPhonePrefix
 
-  :<|> "users" :> "phone-prefixes"
+  , _r0142 :: route :- "users" :> "phone-prefixes"
       :> ReqBody ExcludedPrefix
       :> Post NoContent
      -- handler: addPhonePrefix
 
     -- is :uid not team owner, or there are other team owners?
-  :<|> "users" :> Capture "uid" UserId :> "can-be-deleted" :> Capture "tid" TeamId
+  , _r0148 :: route :- "users" :> Capture "uid" UserId :> "can-be-deleted" :> Capture "tid" TeamId
       :> Get NoContent  -- info is encoded in dynamic response status code
      -- handler: canBeDeleted
 
     -- is :uid team owner (the only one or one of several)?
-  :<|> "users" :> Capture "uid" UserId :> "is-team-owner" :> Capture "tid" TeamId
+  , _r0153 :: route :- "users" :> Capture "uid" UserId :> "is-team-owner" :> Capture "tid" TeamId
       :> Get NoContent  -- info is encoded in dynamic response status code
      -- handler: isTeamOwner
 
-  :<|> "users" :> Capture "uid" UserId :> "sso-id"
+  , _r0157 :: route :- "users" :> Capture "uid" UserId :> "sso-id"
       :> ReqBody UserSSOId
       :> Put200 NoContent
      -- handler: updateSSOId
 
-  :<|> "users" :> Capture "uid" UserId :> "managed-by"
+  , _r0162 :: route :- "users" :> Capture "uid" UserId :> "managed-by"
       :> ReqBody ManagedByUpdate
       :> Put200 NoContent
      -- handler: updateManagedBy
 
-  :<|> "users" :> Capture "uid" UserId :> "rich-info"
+  , _r0167 :: route :- "users" :> Capture "uid" UserId :> "rich-info"
       :> ReqBody RichInfoUpdate
       :> Put200 NoContent
      -- handler: updateRichInfo
 
-  :<|> "clients"
+  , _r0172 :: route :- "clients"
       :> ReqBody UserSet
       :> Post UserClients
      -- handler: internalListClients
+  }
+  deriving (Generic)
