@@ -4,6 +4,8 @@
 
 module Brig.Types.Servant.API.Users where
 
+import Imports
+
 import qualified "swagger" Data.Swagger.Build.Api as Swagger1
 import "swagger2" Data.Swagger as Swagger2
 
@@ -21,8 +23,8 @@ import Data.ByteString.Conversion (List(..))
 import Data.Currency (Alpha)
 import Data.HashMap.Strict.InsOrd
 import Data.Id
-import Data.ISO3166_CountryCodes
-import Data.LanguageCodes
+import Data.ISO3166_CountryCodes ()
+import Data.LanguageCodes ()
 import Data.Misc
 import Data.Proxy
 import Data.Range
@@ -35,11 +37,25 @@ import Galley.Types.Teams
 import qualified Data.Json.Util
 import qualified Data.Metrics as Metrics
 import qualified Servant
+import Servant.API.Generic
 import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam', URI)
 import Servant.Swagger
-import Servant.API.Generic
 import URI.ByteString.QQ (uri)
 import URI.ByteString (URI)
+
+import GHC.TypeLits
+
+
+import Data.String.Conversions
+import System.Process (system)
+import Data.Aeson (encode)
+import Test.Hspec (hspec)
+-- import Brig.Types.Test.Arbitrary ()
+
+main :: IO ()
+main = do
+  writeFile "/tmp/x" . cs $ encode (toSwagger api)
+  void $ system "cat /tmp/x | json_pp" --  && curl -X POST -d @/tmp/x -H 'Content-Type:application/json' http://online.swagger.io/validator/debug | json_pp"
 
 
 api :: Proxy (ToServantApi API)
@@ -50,7 +66,8 @@ data API route = API
          "api-docs" :> QueryParamStrict "base_url" URI :> Get Swagger1.ApiDecl
 
   , _uidHead :: route :-
-         Capture "uid" UserId
+         Summary "Check if a user ID exists"
+      :> Capture "uid" UserId
       :> AuthZUser
       :> Head NoContent
      -- handler: checkUserExists

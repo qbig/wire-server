@@ -311,6 +311,7 @@ instance ToSchema ManagedByUpdate
 instance ToSchema RichInfoUpdate
 instance ToSchema RichInfo
 instance ToSchema RichField
+instance ToSchema NoContent
 
 instance ToParamSchema ConnId where
     toParamSchema _ = toParamSchema (Proxy @Text)

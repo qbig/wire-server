@@ -58,25 +58,23 @@ import qualified Brig.Types.Servant.API.Users
 
 
 
-{-
 import Data.String.Conversions
 import System.Process (system)
 import Data.Aeson (encode)
 import Test.Hspec (hspec)
-import Brig.Types.Test.Arbitrary ()
+-- import Brig.Types.Test.Arbitrary ()
 
 main :: IO ()
 main = do
   writeFile "/tmp/x" . cs $ encode swagger
   void $ system "cat /tmp/x | json_pp && curl -X POST -d @/tmp/x -H 'Content-Type:application/json' http://online.swagger.io/validator/debug | json_pp"
-  hspec $ validateEveryToJSON (Proxy @GalleyRoutes)
+  -- hspec $ validateEveryToJSON (Proxy @(ToServantApi API'))
   -- see also: https://github.com/swagger-api/validator-badge
 
   -- alternatives:
   -- https://github.com/navidsh/maven.swagger.validator
   -- https://editor.swagger.io/  (this finds dangling refs.  good.)
   -- https://apidevtools.org/swagger-parser/online/  (also finds dangling refs, but it's *very slow*)
--}
 
 
 
@@ -87,13 +85,14 @@ main = do
 swagger :: Swagger
 swagger = toSwagger api
 
-api :: Proxy (ToServantApi API')
-api = genericApi (Proxy :: Proxy API')
+api :: Proxy (ToServantApi API)
+api = genericApi (Proxy :: Proxy API)
 
 data API route = API
   { _route_i     :: route :- "i"     :> ToServantApi Brig.Types.Servant.API.Internal.API
-  , _route_users :: route :- "users" :> ToServantApi Brig.Types.Servant.API.Users.API
+    _route_users :: route :- "users" :> ToServantApi Brig.Types.Servant.API.Users.API
   }
+  deriving (Generic)
 
 
 
