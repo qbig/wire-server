@@ -11,8 +11,10 @@ license: AGPL-3
 dependencies:
 - hostname-validate
 - imports
+- insert-ordered-containers
 - lens
 - metrics-core
+- servant
 - servant-server
 - servant-swagger
 - swagger2
