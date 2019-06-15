@@ -14,7 +14,7 @@ import Servant hiding (Get, Put, Post, Delete, ReqBody, QueryParam, QueryParam')
 import Servant.API.Generic
 
 
-type API = "i" :> API'
+type API = "i" :> Get NoContent
 
 type API'
      = "status"     :> Get NoContent
