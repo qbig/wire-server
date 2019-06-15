@@ -149,6 +149,7 @@ newtype ConnId = ConnId
                , ToByteString
                , Hashable
                , NFData
+               , Generic
                )
 
 instance ToJSON ConnId where
