@@ -1,7 +1,5 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-
-
 {-# OPTIONS_GHC -Wno-orphans #-}
 -- FUTUREWORK: move the 'ToSchema' instances to their home modules (where the data types
 -- live), and turn warning about orphans back on.
@@ -81,7 +79,6 @@ main = do
 --
 ----------------------------------------------------------------------
 
-
 swagger :: Swagger
 swagger = toSwagger api
 
@@ -89,12 +86,10 @@ api :: Proxy (ToServantApi API)
 api = genericApi (Proxy :: Proxy API)
 
 data API route = API
-  { _route_i     :: route :- "i"     :> ToServantApi Brig.Types.Servant.API.Internal.API
-    _route_users :: route :- "users" :> ToServantApi Brig.Types.Servant.API.Users.API
+  { _apiI     :: route :- "i"     :> ToServantApi Brig.Types.Servant.API.Internal.API
+  , _apiUsers :: route :- "users" :> ToServantApi Brig.Types.Servant.API.Users.API
   }
   deriving (Generic)
-
-
 
 -- TODO: read ~/src/wire-server-swaggrify/libs/brig-types/src/Brig/Types/Swagger.hs and see what we've missed.
 
@@ -104,7 +99,7 @@ data API route = API
 -- noise: this is how we'll build servers later.
 
 data API' route = API'
-  { _r0002 :: route :- Get NoContent
+  { _r0002 :: route :- "path" :> Get NoContent
   }
   deriving (Generic)
 

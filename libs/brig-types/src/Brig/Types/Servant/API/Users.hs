@@ -62,81 +62,17 @@ api :: Proxy (ToServantApi API)
 api = genericApi (Proxy :: Proxy API)
 
 data API route = API
-  { _apiDocs :: route :-
+  { _getApiDocs :: route :-
          "api-docs" :> QueryParamStrict "base_url" URI :> Get Swagger1.ApiDecl
 
-  , _uidHead :: route :-
+  , _getUidHead :: route :-
          Summary "Check if a user ID exists"
       :> Capture "uid" UserId
       :> AuthZUser
-      :> ErrorCase 'Http404 Head NoContent
+      :> Head NoContent
      -- handler: checkUserExists
 
   } deriving (Generic)
-
-data ErrorCase (status :: HttpStatus) verb body
-  deriving (Generic)
-
-data HttpStatus = Http200 | Http404
-  deriving (Generic)
-
-instance ( verb ~ Verb v s cts
-         , HasSwagger (verb body)
-         ) => HasSwagger (ErrorCase status verb body) where
-  toSwagger _ = toSwagger (Proxy @(verb body))
-    & responses %~ (<> Data.HashMap.Strict.InsOrd.fromList [("299", errResp "bla")])
-
-
--- swagger ^. paths ==[("/",PathItem {_pathItemGet = Nothing, _pathItemPut = Nothing, _pathItemPost = Nothing, _pathItemDelete = Nothing, _pathItemOptions = Nothing, _pathItemHead = Just (Operation {_operationTags = fromList [], _operationSummary = Nothing, _operationDescription = Nothing, _operationExternalDocs = Nothing, _operationOperationId = Nothing, _operationConsumes = Nothing, _operationProduces = Just (MimeList {getMimeList = [application/json;charset=utf-8]}), _operationParameters = [], _operationResponses = Responses {_responsesDefault = Nothing, _responsesResponses = fromList [(204,Inline (Response {_responseDescription = "", _responseSchema = Nothing, _responseHeaders = fromList [], _responseExamples = Nothing}))]}, _operationSchemes = Nothing, _operationDeprecated = Nothing, _operationSecurity = []}), _pathItemPatch = Nothing, _pathItemParameters = []})]
-
-
-    -- TODO: now i could restrict 'v' to legal verbs using a closed type family somehow, then
-    -- dispatch over 'v' to pick the record field of the PathItem corresponding to 'v', and
-    -- add the responses to the 'operation' there.
-
-    -- TODO: it's still a good question whether that's worth the trouble, since the handler
-    -- can throw exceptions not matching this spec without getting caught.  the ToServer
-    -- instances can just ignore the 'ErrorCase' types here.
-
- -- OHOHOHOHIKNOW!!  a better idea may be to write a 'FancyVerb' data type to replace 'Verb',
- -- make that contain all the information from artyom's draft, and use that throughout.
-
-
-
-
-
-
-errResp :: Text -> Response
-errResp desc = mempty & description .~ desc
-
-
-{-
-
-data Swagger
-  = Swagger {_swaggerInfo :: Info,
-             _swaggerHost :: Maybe Host,
-             _swaggerBasePath :: Maybe FilePath,
-             _swaggerSchemes :: Maybe [Scheme],
-             _swaggerConsumes :: MimeList,
-             _swaggerProduces :: MimeList,
-             _swaggerPaths :: InsOrdHashMap FilePath PathItem,
-             _swaggerDefinitions :: Definitions Schema,
-             _swaggerParameters :: Definitions Swagger2.Param,
-             _swaggerResponses :: Definitions Response,
-             _swaggerSecurityDefinitions :: Definitions SecurityScheme,
-             _swaggerSecurity :: [SecurityRequirement],
-             _swaggerTags :: Set Tag,
-             _swaggerExternalDocs :: Maybe ExternalDocs}
-        -- Defined in ‘Data.Swagger.Internal’
-
-
-        Doc.response 200 "User exists" Doc.end
-        Doc.errorResponse userNotFound
-
--}
-
-
-
 
 
 {-
