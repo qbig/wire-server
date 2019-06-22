@@ -67,12 +67,16 @@ main = do
   writeFile "/tmp/x" . cs $ encode swagger
   void $ system "cat /tmp/x | json_pp && curl -X POST -d @/tmp/x -H 'Content-Type:application/json' http://online.swagger.io/validator/debug | json_pp"
   -- hspec $ validateEveryToJSON (Proxy @(ToServantApi API'))
-  -- see also: https://github.com/swagger-api/validator-badge
 
-  -- alternatives:
+  -- related, but rejected:
+  -- https://github.com/swagger-api/validator-badge
   -- https://github.com/navidsh/maven.swagger.validator
   -- https://editor.swagger.io/  (this finds dangling refs.  good.)
   -- https://apidevtools.org/swagger-parser/online/  (also finds dangling refs, but it's *very slow*)
+
+
+
+  -- TODO: run https://www.npmjs.com/package/swagger-cli in integration tests.
 
 
 
