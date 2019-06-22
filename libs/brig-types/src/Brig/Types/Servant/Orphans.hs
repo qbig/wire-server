@@ -311,6 +311,9 @@ instance ToSchema ManagedByUpdate
 instance ToSchema RichInfoUpdate
 instance ToSchema RichInfo
 instance ToSchema RichField
+
+-- FUTUREWORK: once we have https://github.com/haskell-servant/servant-swagger/pull/107 pulled
+-- in, we can send empty bodies again and this would still work.
 instance ToSchema NoContent
 
 instance ToParamSchema ConnId where
